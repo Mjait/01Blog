@@ -1,54 +1,77 @@
 package com.jait._Blog.user;
 
-import java.time.Instant;
-import java.util.UUID;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-public class User {
-    private UUID id;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User implements UserDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 30)
     private String username;
+
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
-    private String hashedPassword;
-    private Instant createdAt;
 
-    public User(UUID id, String username, String email, String hashedPassword, Instant createdAt) {
-        this.id = id;
-        this.username = username;
-        this.email = email;
-        this.hashedPassword = hashedPassword;
-        this.createdAt = createdAt;
+    @Column(nullable = false)
+    private String password;
 
+    @Column(length = 300)
+    private String bio;
+
+    private String avatarUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean banned = false;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
-    public UUID getId() {
-        return id;
+    @Override
+    public boolean isAccountNonLocked() {
+        return !banned; 
     }
 
-    public String getUsername() {
-        return username;
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
     }
 
-    public String getEmail() {
-        return email;
+    @Override
+    public boolean isEnabled() {
+        return !banned;
     }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public String getHashedPassword() {
-        return  hashedPassword;
-    }
-
-    public void setHashedPassword(String hashedPassword) {
-        this.hashedPassword = hashedPassword;
-    }
-
 }
