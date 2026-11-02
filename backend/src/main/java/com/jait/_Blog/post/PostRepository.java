@@ -7,6 +7,9 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findAllByAuthorAndHiddenFalseOrderByCreatedAtDesc(User author);
+    List<Post> findAllByAuthorOrderByCreatedAtDesc(User author);
     List<Post> findAllByAuthorInAndHiddenFalseOrderByCreatedAtDesc(List<User> authors);
     List<Post> findAllByHiddenFalseOrderByCreatedAtDesc();
+    List<Post> findAllByOrderByCreatedAtDesc();
+    long countByAuthor(User author);
 }

@@ -9,4 +9,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findAllByRecipientOrderByCreatedAtDesc(User recipient);
     long countByRecipientAndReadFalse(User recipient);
     void deleteAllByPostId(Long postId);
+    void deleteAllByRecipient(User recipient);
+    void deleteAllByActor(User actor);
 }
