@@ -34,6 +34,10 @@ public class Notification {
     @Column(nullable = false, length = 255)
     private String message;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private NotificationType type;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean read = false;

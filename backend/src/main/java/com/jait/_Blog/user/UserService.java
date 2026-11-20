@@ -1,6 +1,8 @@
 package com.jait._Blog.user;
 
 import com.jait._Blog.exception.ApiException;
+import com.jait._Blog.notification.NotificationService;
+import com.jait._Blog.notification.NotificationType;
 import com.jait._Blog.subscription.Subscription;
 import com.jait._Blog.subscription.SubscriptionRepository;
 import com.jait._Blog.user.dto.UserProfileResponse;
@@ -18,6 +20,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final NotificationService notificationService; // <-- 1. تم حقن خدمة الإشعارات هنا
 
     @Transactional(readOnly = true)
     public UserProfileResponse getPublicProfileByUsername(String username, User currentUser) {
@@ -50,6 +53,16 @@ public class UserService {
                 .build();
 
         subscriptionRepository.save(subscription);
+
+        // <-- 2. إرسال الإشعار للمستخدم المستهدف مباشرة بعد الحفظ
+        notificationService.sendNotification(
+                targetUser,
+                currentUser,
+                null,
+                "@" + currentUser.getUsername() + " started following your block 🧶",
+                NotificationType.FOLLOW
+        );
+
         return buildProfileResponse(targetUser, currentUser);
     }
 

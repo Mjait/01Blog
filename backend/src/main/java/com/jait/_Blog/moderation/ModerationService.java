@@ -7,6 +7,7 @@ import com.jait._Blog.moderation.dto.AdminUserResponse;
 import com.jait._Blog.moderation.dto.ReportRequest;
 import com.jait._Blog.moderation.dto.ReportResponse;
 import com.jait._Blog.notification.NotificationRepository;
+import com.jait._Blog.notification.NotificationService; // <-- 1. استيراد NotificationService
 import com.jait._Blog.post.MediaStorageService;
 import com.jait._Blog.post.Post;
 import com.jait._Blog.post.PostRepository;
@@ -37,6 +38,7 @@ public class ModerationService {
     private final NotificationRepository notificationRepository;
     private final MediaStorageService mediaStorageService;
     private final UserService userService;
+    private final NotificationService notificationService; // <-- 2. حقن NotificationService هنا
 
     @Transactional
     public ReportResponse reportUser(Long userId, ReportRequest request, User currentUser) {
@@ -59,7 +61,17 @@ public class ModerationService {
                 .reason(request.getReason().trim())
                 .build();
 
-        return toResponse(reportRepository.save(report));
+        Report savedReport = reportRepository.save(report);
+
+        // <-- 3. إرسال إشعار فوري لجميع الأدمنز عند التبليغ
+        notificationService.notifyAdminsAboutReport(
+                currentUser,
+                reportedUser,
+                request.getReportedPostId(),
+                savedReport.getReason()
+        );
+
+        return toResponse(savedReport);
     }
 
     @Transactional(readOnly = true)

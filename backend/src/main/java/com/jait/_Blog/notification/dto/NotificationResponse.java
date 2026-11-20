@@ -1,5 +1,6 @@
 package com.jait._Blog.notification.dto;
 
+import com.jait._Blog.notification.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,11 +11,13 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 public class NotificationResponse {
-    private Long id;
-    private Long actorId;
-    private String actorUsername;
-    private Long postId;
-    private String message;
-    private boolean read;
-    private LocalDateTime createdAt;
+  private  Long id;
+  private  Long recipientId;
+  private  Long actorId;
+  private  String actorUsername;
+  private  Long postId;
+  private  String message;
+  private  NotificationType type;
+  private  boolean read;
+  private  LocalDateTime createdAt;
 }

@@ -1,7 +1,9 @@
+import { MatDialog } from "@angular/material/dialog";
+import { ReportModalComponent } from "../../../shared/components/report-modal/report-modal";
 import { Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
 import { PostService, PostItem, CommentItem } from '../../../core/services/post.service';
@@ -413,6 +415,8 @@ export class CommunityFeedComponent implements OnInit {
   feedback = inject(FeedbackService);
   postService = inject(PostService);
   private platformId = inject(PLATFORM_ID);
+  private route = inject(ActivatedRoute);
+  private dialog = inject(MatDialog);
 
   // Reactive Signals for instant UI updates in Angular 22
   feedMode = signal<'subscribed' | 'all'>('all');
@@ -435,7 +439,16 @@ export class CommunityFeedComponent implements OnInit {
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
-      this.loadPosts();
+      this.route.queryParams.subscribe(params => {
+        const q = params["q"]?.toLowerCase();
+        if (q) {
+          this.postService.getPublicPosts().subscribe(data => {
+            this.posts.set(data.filter(p => p.content.toLowerCase().includes(q) || p.authorUsername.toLowerCase().includes(q)));
+          });
+        } else {
+          this.loadPosts();
+        }
+      });
     }
   }
 
@@ -583,19 +596,15 @@ export class CommunityFeedComponent implements OnInit {
   }
 
   reportPost(post: PostItem): void {
-    const reason = prompt('Please enter the reason for reporting this post:');
-    if (!reason || !reason.trim()) return;
+    const dialogRef = this.dialog.open(ReportModalComponent, {
+      data: { targetUsername: post.authorUsername, targetUserId: post.authorId, postId: post.id }
+    });
 
-    this.feedback.confirm({
-      title: 'Submit Report',
-      message: `Are you sure you want to report @${post.authorUsername}'s post for: "${reason}"?`,
-      confirmText: 'Submit Report',
-      isDestructive: false
-    }).subscribe((confirmed) => {
-      if (confirmed) {
+    dialogRef.afterClosed().subscribe((reason: string | null) => {
+      if (reason) {
         this.postService.reportUser(post.authorId, reason, post.id).subscribe({
-          next: () => this.feedback.showSuccess('Report submitted to administrators for review'),
-          error: (err) => this.feedback.showError(err.error?.message || 'Report submission failed')
+          next: () => this.feedback.showSuccess("Report submitted to administrators for review"),
+          error: (err) => this.feedback.showError(err.error?.message || "Report submission failed")
         });
       }
     });
