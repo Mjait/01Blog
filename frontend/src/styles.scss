@@ -16,6 +16,21 @@
   --success: #3E7B54;          /* Forest Muted Green */
 }
 
+[data-theme='light'] {
+  --bg-primary: #F4F2EC;       /* Clean Linen Base */
+  --bg-card: #FFFFFF;          /* Pure White Card */
+  --text-main: #1C1A24;        /* Deep Charcoal Text */
+  --text-muted: #6C6677;       /* Muted Slate Text */
+  --accent-primary: #5A5375;   /* Soft Indigo */
+  --accent-primary-hover: #484161;
+  --accent-gold: #9E7D2B;      /* Polished Antique Gold */
+  --accent-gold-hover: #8A6C21;
+  --border-subtle: #E2DDD5;    /* Subtle Light Divider */
+  --danger: #A33434;
+  --danger-hover: #8A2A2A;
+  --success: #2B6E44;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -92,4 +107,50 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--accent-primary);
   border-radius: 3px;
+}
+
+/* Markdown Content Styling (Bonus Requirement) */
+.markdown-content {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  p { margin: 0 0 8px; }
+  strong { color: var(--accent-gold); font-weight: 700; }
+  em { font-style: italic; }
+  code {
+    background: rgba(74, 67, 99, 0.25);
+    color: var(--accent-gold);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.88em;
+    border: 1px solid var(--border-subtle);
+  }
+  pre {
+    background: #0c0b10;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    code { background: none; padding: 0; border: none; }
+  }
+  blockquote {
+    border-left: 3px solid var(--accent-gold);
+    margin: 8px 0;
+    padding: 4px 12px;
+    color: var(--text-muted);
+    background: rgba(74, 67, 99, 0.15);
+    border-radius: 0 6px 6px 0;
+  }
+  h1, h2, h3 {
+    margin: 12px 0 6px;
+    color: var(--accent-gold);
+    font-size: 1.12rem;
+  }
+  ul, ol {
+    margin: 6px 0 10px 20px;
+    padding: 0;
+  }
+  li { margin-bottom: 4px; }
 }

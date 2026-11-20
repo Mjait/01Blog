@@ -9,11 +9,12 @@ import { UserService, UserProfile } from '../../../core/services/user.service';
 import { PostService, PostItem } from '../../../core/services/post.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
 import { ReportModalComponent } from '../../../shared/components/report-modal/report-modal';
+import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe],
   template: `
     <div class="profile-container" *ngIf="profile() as user">
       <!-- Profile Banner & Header Card -->
@@ -99,7 +100,7 @@ import { ReportModalComponent } from '../../../shared/components/report-modal/re
             </div>
           </div>
 
-          <p class="post-body">{{ post.content }}</p>
+          <div class="markdown-content" [innerHTML]="post.content | markdown"></div>
 
           <div class="post-media" *ngIf="post.mediaUrl">
             <img *ngIf="post.mediaType === 'IMAGE'" [src]="'http://localhost:8080' + post.mediaUrl" loading="lazy" alt="Post media" />
@@ -249,6 +250,7 @@ export class UserProfileComponent implements OnInit {
   editingPostId = signal<number | null>(null);
   postContent = '';
   selectedFile: File | null = null;
+  removeMedia = false;
   mediaPreviewUrl = signal<string | null>(null);
   mediaPreviewType = signal<'IMAGE' | 'VIDEO' | null>(null);
 
@@ -305,6 +307,7 @@ export class UserProfileComponent implements OnInit {
     const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
+      this.removeMedia = false;
       this.mediaPreviewType.set(file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
       this.mediaPreviewUrl.set(URL.createObjectURL(file));
       this.feedback.showSuccess(`Selected file: ${file.name}`);
@@ -313,6 +316,7 @@ export class UserProfileComponent implements OnInit {
 
   clearMedia(): void {
     this.selectedFile = null;
+    this.removeMedia = true;
     this.mediaPreviewUrl.set(null);
     this.mediaPreviewType.set(null);
   }
@@ -320,11 +324,14 @@ export class UserProfileComponent implements OnInit {
   startEdit(post: PostItem): void {
     this.editingPostId.set(post.id);
     this.postContent = post.content;
+    this.selectedFile = null;
+    this.removeMedia = false;
     if (post.mediaUrl) {
       this.mediaPreviewType.set(post.mediaType);
       this.mediaPreviewUrl.set('http://localhost:8080' + post.mediaUrl);
     } else {
       this.clearMedia();
+      this.removeMedia = false;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -332,6 +339,7 @@ export class UserProfileComponent implements OnInit {
   cancelEdit(): void {
     this.editingPostId.set(null);
     this.postContent = '';
+    this.removeMedia = false;
     this.clearMedia();
   }
 
@@ -341,7 +349,7 @@ export class UserProfileComponent implements OnInit {
 
     const editId = this.editingPostId();
     const req$ = editId
-      ? this.userService.updatePost(editId, this.postContent, this.selectedFile)
+      ? this.userService.updatePost(editId, this.postContent, this.selectedFile, this.removeMedia)
       : this.postService.createPost(this.postContent, this.selectedFile);
 
     req$.pipe(finalize(() => this.savingPost.set(false))).subscribe({

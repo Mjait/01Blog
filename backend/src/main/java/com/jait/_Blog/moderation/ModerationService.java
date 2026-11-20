@@ -14,6 +14,7 @@ import com.jait._Blog.post.PostRepository;
 import com.jait._Blog.post.PostService;
 import com.jait._Blog.post.dto.PostResponse;
 import com.jait._Blog.subscription.SubscriptionRepository;
+import com.jait._Blog.user.Role;
 import com.jait._Blog.user.User;
 import com.jait._Blog.user.UserRepository;
 import com.jait._Blog.user.UserService;
@@ -48,6 +49,10 @@ public class ModerationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "You cannot report yourself");
         }
 
+        if (reportedUser.getRole() == Role.ADMIN) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Administrators cannot be reported");
+        }
+
         Post reportedPost = null;
         if (request.getReportedPostId() != null) {
             reportedPost = postRepository.findById(request.getReportedPostId())
@@ -59,11 +64,11 @@ public class ModerationService {
                 .reportedUser(reportedUser)
                 .reportedPost(reportedPost)
                 .reason(request.getReason().trim())
+                .status(ReportStatus.PENDING)
                 .build();
 
         Report savedReport = reportRepository.save(report);
 
-        // <-- 3. إرسال إشعار فوري لجميع الأدمنز عند التبليغ
         notificationService.notifyAdminsAboutReport(
                 currentUser,
                 reportedUser,
@@ -104,6 +109,9 @@ public class ModerationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Administrators cannot ban themselves");
         }
         User user = userService.getUserOrThrow(userId);
+        if (user.getRole() == Role.ADMIN) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cannot ban an administrator account. Demote the user to USER first.");
+        }
         user.setBanned(banned);
         return toAdminUserResponse(userRepository.save(user));
     }
@@ -114,6 +122,9 @@ public class ModerationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Administrators cannot delete their own account");
         }
         User user = userService.getUserOrThrow(userId);
+        if (user.getRole() == Role.ADMIN) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cannot delete an administrator account. Demote the user to USER first.");
+        }
 
         // 1. Delete all posts authored by this user (and their likes/comments/notifications/reports)
         List<Post> userPosts = postRepository.findAllByAuthorOrderByCreatedAtDesc(user);
@@ -166,6 +177,53 @@ public class ModerationService {
         return postService.toResponse(postRepository.save(post), currentAdmin);
     }
 
+    @Transactional
+    public ReportResponse updateReportStatus(Long reportId, ReportStatus status) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Report not found"));
+        report.setStatus(status);
+        return toResponse(reportRepository.save(report));
+    }
+
+    @Transactional
+    public AdminUserResponse updateUserRole(Long userId, Role newRole, User currentAdmin) {
+        if (currentAdmin.getId().equals(userId)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Administrators cannot change their own role");
+        }
+
+        User user = userService.getUserOrThrow(userId);
+
+        // Root/primary admin protection: username "admin" or id 1 cannot be demoted
+        if (user.getRole() == Role.ADMIN && newRole == Role.USER) {
+            if ("admin".equalsIgnoreCase(user.getUsername()) || Long.valueOf(1L).equals(user.getId())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "The primary platform administrator cannot be demoted");
+            }
+        }
+
+        // Cannot promote banned accounts
+        if (user.isBanned() && newRole == Role.ADMIN) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cannot promote a banned user to administrator. Unban the account first.");
+        }
+
+        user.setRole(newRole);
+        User savedUser = userRepository.save(user);
+
+        // Send notification to the affected user
+        String message = (newRole == Role.ADMIN)
+                ? "👑 Congratulations! You have been granted Administrator privileges by @" + currentAdmin.getUsername()
+                : "ℹ️ Your Administrator role has been updated to standard User by @" + currentAdmin.getUsername();
+
+        notificationService.sendNotification(
+                savedUser,
+                currentAdmin,
+                null,
+                message,
+                NotificationType.FOLLOW
+        );
+
+        return toAdminUserResponse(savedUser);
+    }
+
     private AdminUserResponse toAdminUserResponse(User user) {
         return AdminUserResponse.builder()
                 .id(user.getId())
@@ -189,6 +247,7 @@ public class ModerationService {
                 .reportedUsername(r.getReportedUser().getUsername())
                 .reportedPostId(r.getReportedPost() != null ? r.getReportedPost().getId() : null)
                 .reason(r.getReason())
+                .status(r.getStatus())
                 .createdAt(r.getCreatedAt())
                 .build();
     }

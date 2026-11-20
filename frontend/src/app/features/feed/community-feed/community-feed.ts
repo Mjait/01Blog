@@ -1,6 +1,7 @@
 import { MatDialog } from "@angular/material/dialog";
 import { ReportModalComponent } from "../../../shared/components/report-modal/report-modal";
-import { Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { MarkdownPipe } from "../../../shared/pipes/markdown.pipe";
+import { Component, inject, OnInit, PLATFORM_ID, signal, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute } from '@angular/router';
@@ -12,7 +13,7 @@ import { finalize } from 'rxjs';
 @Component({
   selector: 'app-community-feed',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe],
   template: `
     <div class="feed-layout">
       <!-- Left Sidebar: Profile & Navigation -->
@@ -33,13 +34,19 @@ import { finalize } from 'rxjs';
 
       <!-- Center: Feed Stream & Publisher -->
       <section class="feed-center">
+        <!-- Mobile Feed Tabs (Responsive Mobile UX) -->
+        <div class="mobile-feed-tabs">
+          <button [class.active]="feedMode() === 'all'" (click)="setMode('all')">🌐 Explore All</button>
+          <button [class.active]="feedMode() === 'subscribed'" (click)="setMode('subscribed')">🏠 Subscribed</button>
+        </div>
+
         <!-- Post Publisher Card -->
         <div class="create-post-card woob-card">
           <div class="create-top">
             <span class="creator-avatar">🧶</span>
             <textarea 
               [(ngModel)]="newPostContent" 
-              placeholder="Share your latest creation or thought with the community..." 
+              placeholder="Share your latest creation or thought with markdown (**bold**, *italic*, #header)..." 
               rows="3"
             ></textarea>
           </div>
@@ -88,7 +95,7 @@ import { finalize } from 'rxjs';
           </div>
 
           <!-- Post Cards -->
-          <div *ngFor="let post of posts()" class="post-card woob-card">
+          <div *ngFor="let post of visiblePosts()" class="post-card woob-card">
             <!-- Author Header -->
             <div class="post-header">
               <div class="author-info">
@@ -105,20 +112,45 @@ import { finalize } from 'rxjs';
 
               <!-- Author / Admin Actions -->
               <div class="post-menu">
+                <button *ngIf="currentUser?.id === post.authorId" class="action-link edit" (click)="startEdit(post)">
+                  ✏️ Edit
+                </button>
                 <button *ngIf="isOwnerOrAdmin(post)" class="action-link delete" (click)="deletePost(post)">
-                  Delete
+                  🗑️ Delete
                 </button>
                 <button *ngIf="currentUser?.id !== post.authorId" class="action-link report" (click)="reportPost(post)">
-                  Report
+                  🚩 Report
                 </button>
               </div>
             </div>
 
-            <!-- Content -->
-            <p class="post-text">{{ post.content }}</p>
+            <!-- Inline Post Editor on Feed -->
+            <div class="inline-edit-box" *ngIf="editingPostId() === post.id">
+              <textarea [(ngModel)]="editContent" rows="3" placeholder="Edit post content..."></textarea>
+              <div class="media-preview-container" *ngIf="editMediaPreviewUrl()">
+                <div class="preview-box">
+                  <img *ngIf="editMediaPreviewType() === 'IMAGE'" [src]="editMediaPreviewUrl()" alt="Edit preview" />
+                  <video *ngIf="editMediaPreviewType() === 'VIDEO'" [src]="editMediaPreviewUrl()" controls></video>
+                  <button class="remove-btn" (click)="clearEditMedia()" title="Remove media">✕</button>
+                </div>
+              </div>
+              <div class="edit-actions">
+                <label class="media-btn">
+                  📷 Change Media
+                  <input type="file" (change)="onEditFileSelected($event)" accept="image/*,video/*" hidden />
+                </label>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-steel" (click)="cancelEdit()">Cancel</button>
+                  <button class="btn-gold" (click)="saveEdit(post)" [disabled]="savingEdit() || !editContent.trim()">Save</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content with Markdown rendering (Bonus Requirement) -->
+            <div *ngIf="editingPostId() !== post.id" class="markdown-content" [innerHTML]="post.content | markdown"></div>
 
             <!-- Media Preview -->
-            <div class="post-media" *ngIf="post.mediaUrl">
+            <div class="post-media" *ngIf="editingPostId() !== post.id && post.mediaUrl">
               <img *ngIf="post.mediaType === 'IMAGE'" [src]="'http://localhost:8080' + post.mediaUrl" loading="lazy" alt="Post attachment" />
               <video *ngIf="post.mediaType === 'VIDEO'" [src]="'http://localhost:8080' + post.mediaUrl" controls></video>
             </div>
@@ -153,6 +185,13 @@ import { finalize } from 'rxjs';
                 <button class="btn-gold" (click)="submitComment(post)" [disabled]="!newCommentText.trim()">Send</button>
               </div>
             </div>
+          </div>
+
+          <!-- Infinite Scroll / Load More UX (Bonus Requirement) -->
+          <div class="load-more-container" *ngIf="posts().length > displayedCount()">
+            <button class="btn-steel" (click)="loadMorePosts()">
+              🧵 Load More Posts ({{ posts().length - displayedCount() }} remaining)
+            </button>
           </div>
         </div>
       </section>
@@ -313,10 +352,38 @@ import { finalize } from 'rxjs';
       cursor: pointer;
       font-size: 0.82rem;
       margin-left: 8px;
+      &.edit { color: var(--accent-gold); }
       &.delete { color: var(--danger); }
       &.report { color: var(--text-muted); &:hover { color: var(--accent-gold); } }
     }
-    .post-text { font-size: 0.98rem; line-height: 1.5; margin: 0 0 14px; white-space: pre-wrap; }
+    .inline-edit-box {
+      margin: 10px 0 16px;
+      background: #121118;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px;
+      textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        font-size: 0.95rem;
+        outline: none;
+        resize: vertical;
+      }
+      .edit-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 10px;
+      }
+    }
+    .load-more-container {
+      text-align: center;
+      margin: 16px 0;
+    }
     .post-media {
       margin-bottom: 14px;
       border-radius: 12px;
@@ -404,9 +471,31 @@ import { finalize } from 'rxjs';
         color: var(--accent-gold);
       }
     }
+    .mobile-feed-tabs {
+      display: none;
+      gap: 8px;
+      margin-bottom: 16px;
+      button {
+        flex: 1;
+        background: var(--bg-card);
+        color: var(--text-muted);
+        border: 1px solid var(--border-subtle);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        &.active {
+          background: var(--accent-gold);
+          color: #121118;
+          border-color: var(--accent-gold);
+        }
+      }
+    }
     @media (max-width: 960px) {
       .feed-layout { grid-template-columns: 1fr; }
       .sidebar-left, .sidebar-right { display: none; }
+      .mobile-feed-tabs { display: flex; }
     }
   `]
 })
@@ -423,6 +512,19 @@ export class CommunityFeedComponent implements OnInit {
   posts = signal<PostItem[]>([]);
   loading = signal<boolean>(false);
   submitting = signal<boolean>(false);
+
+  // Infinite Scroll & Pagination (Bonus Requirement)
+  displayedCount = signal<number>(10);
+  visiblePosts = computed(() => this.posts().slice(0, this.displayedCount()));
+
+  // Inline Feed Post Editing State
+  editingPostId = signal<number | null>(null);
+  editContent = '';
+  editFile: File | null = null;
+  editMediaPreviewUrl = signal<string | null>(null);
+  editMediaPreviewType = signal<'IMAGE' | 'VIDEO' | null>(null);
+  editRemoveMedia = false;
+  savingEdit = signal<boolean>(false);
 
   newPostContent = '';
   selectedFile: File | null = null;
@@ -574,6 +676,63 @@ export class CommunityFeedComponent implements OnInit {
 
   isOwnerOrAdmin(post: PostItem): boolean {
     return this.currentUser?.id === post.authorId || this.authService.isAdmin();
+  }
+
+  loadMorePosts(): void {
+    this.displayedCount.update(c => c + 10);
+  }
+
+  startEdit(post: PostItem): void {
+    this.editingPostId.set(post.id);
+    this.editContent = post.content;
+    this.editFile = null;
+    this.editRemoveMedia = false;
+    if (post.mediaUrl) {
+      this.editMediaPreviewType.set(post.mediaType);
+      this.editMediaPreviewUrl.set('http://localhost:8080' + post.mediaUrl);
+    } else {
+      this.clearEditMedia();
+    }
+  }
+
+  cancelEdit(): void {
+    this.editingPostId.set(null);
+    this.editContent = '';
+    this.clearEditMedia();
+  }
+
+  onEditFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      this.editFile = file;
+      this.editRemoveMedia = false;
+      this.editMediaPreviewType.set(file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE');
+      this.editMediaPreviewUrl.set(URL.createObjectURL(file));
+      this.feedback.showSuccess(`Selected: ${file.name}`);
+    }
+  }
+
+  clearEditMedia(): void {
+    this.editFile = null;
+    this.editMediaPreviewUrl.set(null);
+    this.editMediaPreviewType.set(null);
+    this.editRemoveMedia = true;
+  }
+
+  saveEdit(post: PostItem): void {
+    if (!this.editContent.trim()) return;
+    this.savingEdit.set(true);
+
+    this.postService.updatePost(post.id, this.editContent, this.editFile, this.editRemoveMedia).pipe(
+      finalize(() => this.savingEdit.set(false))
+    ).subscribe({
+      next: (updated) => {
+        this.posts.update(list => list.map(p => p.id === post.id ? updated : p));
+        this.cancelEdit();
+        this.feedback.showSuccess('Post updated successfully!');
+      },
+      error: (err) => this.feedback.showError(err.error?.message || 'Failed to update post')
+    });
   }
 
   deletePost(post: PostItem): void {

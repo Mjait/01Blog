@@ -22,7 +22,7 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
         <p>Scalable governance — contextual report actions & mandatory confirmation dialogs</p>
       </div>
 
-      <!-- Analytics Overview Cards -->
+      <!-- Analytics Overview Cards (Bonus Requirement: Basic Analytics) -->
       <div class="analytics-grid">
         <div class="stat-card woob-card" (click)="activeTab.set('reports')">
           <span class="stat-label">Pending Reports</span>
@@ -37,9 +37,21 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
         </div>
 
         <div class="stat-card woob-card" (click)="activeTab.set('posts')">
-          <span class="stat-label">Hidden / Moderated Posts</span>
-          <strong class="stat-value highlight-gold">{{ hiddenPostsCount() }}</strong>
-          <span class="stat-trend">🧵 Out of {{ posts().length }} total posts</span>
+          <span class="stat-label">Platform Posts</span>
+          <strong class="stat-value highlight-gold">{{ posts().length }}</strong>
+          <span class="stat-trend">🙈 {{ hiddenPostsCount() }} hidden posts</span>
+        </div>
+
+        <div class="stat-card woob-card most-reported-card" (click)="activeTab.set('reports')">
+          <span class="stat-label">Most Reported Creators</span>
+          <div class="reported-leaderboard" *ngIf="mostReportedUsers().length > 0; else noReported">
+            <span *ngFor="let m of mostReportedUsers()" class="leader-pill">
+              @{{ m.username }} ({{ m.count }})
+            </span>
+          </div>
+          <ng-template #noReported>
+            <span class="stat-trend">✓ Clean record, 0 reports</span>
+          </ng-template>
         </div>
       </div>
 
@@ -346,8 +358,22 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
     }
     .analytics-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
+    }
+    .reported-leaderboard {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .leader-pill {
+      font-size: 0.8rem;
+      background: rgba(158, 59, 59, 0.2);
+      color: #ff8585;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: 600;
     }
     .stat-card {
       padding: 20px;
@@ -551,7 +577,10 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
       color: var(--text-muted);
       padding: 28px;
     }
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
+      .analytics-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
       .analytics-grid { grid-template-columns: 1fr; }
     }
   `]
@@ -613,6 +642,19 @@ export class AdminDashboardComponent implements OnInit {
   hiddenPostsCount = computed(() =>
     this.posts().filter(p => p.hidden).length
   );
+
+  mostReportedUsers = computed(() => {
+    const counts: { [userId: number]: { username: string; count: number; userId: number } } = {};
+    for (const r of this.reports()) {
+      if (!counts[r.reportedUserId]) {
+        counts[r.reportedUserId] = { userId: r.reportedUserId, username: r.reportedUsername, count: 0 };
+      }
+      counts[r.reportedUserId].count++;
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  });
 
   filteredReports(): ReportItem[] {
     const filter = this.reportFilter();

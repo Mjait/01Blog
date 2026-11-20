@@ -31,7 +31,7 @@ public class Notification {
     @Column(name = "post_id")
     private Long postId;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 1000)
     private String message;
 
     @Enumerated(EnumType.STRING)

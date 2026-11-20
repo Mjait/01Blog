@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { interval, Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../services/feedback.service';
 import { NotificationService, NotificationItem } from '../../../core/services/notification.service';
@@ -32,6 +33,11 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
 
         <!-- Navigation Links & User Actions -->
         <nav class="nav-actions">
+          <!-- Theme Toggle (Bonus Requirement) -->
+          <button class="icon-btn theme-toggle" (click)="toggleTheme()" [title]="isDarkMode() ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+            {{ isDarkMode() ? '☀️' : '🌙' }}
+          </button>
+
           <ng-container *ngIf="authService.isAuthenticated(); else guestLinks">
             <a routerLink="/feed" routerLinkActive="active" class="nav-btn">Feed</a>
             
@@ -332,13 +338,15 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
     }
   `]
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
   feedback = inject(FeedbackService);
   notifService = inject(NotificationService);
   private router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private pollingSub?: Subscription;
 
+  isDarkMode = signal<boolean>(true);
   unreadCount = signal<number>(0);
   notifications = signal<NotificationItem[]>([]);
   dropdownOpen = signal<boolean>(false);
@@ -349,9 +357,33 @@ export class NavbarComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (isPlatformBrowser(this.platformId) && this.authService.isAuthenticated()) {
-      this.refreshUnreadCount();
+    if (isPlatformBrowser(this.platformId)) {
+      // 1. Initialize Dark/Light theme
+      const savedTheme = localStorage.getItem('woob_theme') || 'dark';
+      this.isDarkMode.set(savedTheme === 'dark');
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      // 2. Initial unread check & auto-refresh polling (Real-Time Bonus)
+      if (this.authService.isAuthenticated()) {
+        this.refreshUnreadCount();
+        this.pollingSub = interval(25000).subscribe(() => this.refreshUnreadCount());
+      }
     }
+  }
+
+  ngOnDestroy(): void {
+    this.pollingSub?.unsubscribe();
+  }
+
+  toggleTheme(): void {
+    const nextDark = !this.isDarkMode();
+    this.isDarkMode.set(nextDark);
+    const themeName = nextDark ? 'dark' : 'light';
+    if (isPlatformBrowser(this.platformId)) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      localStorage.setItem('woob_theme', themeName);
+    }
+    this.feedback.showSuccess(nextDark ? 'Switched to Midnight Slate (Dark)' : 'Switched to Clean Linen (Light)');
   }
 
   refreshUnreadCount(): void {

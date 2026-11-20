@@ -3,6 +3,7 @@ package com.jait._Blog.moderation;
 import com.jait._Blog.moderation.dto.AdminUserResponse;
 import com.jait._Blog.moderation.dto.ReportResponse;
 import com.jait._Blog.post.dto.PostResponse;
+import com.jait._Blog.user.Role;
 import com.jait._Blog.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,13 @@ public class AdminController {
     @GetMapping("/reports")
     public List<ReportResponse> getAllReports() {
         return moderationService.getAllReports();
+    }
+
+    @PatchMapping("/reports/{reportId}")
+    public ResponseEntity<ReportResponse> updateReportStatus(
+            @PathVariable Long reportId,
+            @RequestParam(defaultValue = "RESOLVED") ReportStatus status) {
+        return ResponseEntity.ok(moderationService.updateReportStatus(reportId, status));
     }
 
     @GetMapping("/users")
@@ -56,9 +64,18 @@ public class AdminController {
     @PatchMapping("/posts/{postId}/hide")
     public ResponseEntity<PostResponse> hidePost(
             @PathVariable Long postId,
-            @RequestParam(defaultValue = "true") boolean hide,
+            @RequestParam(value = "hide", required = false) Boolean hide,
+            @RequestParam(value = "hidden", required = false) Boolean hidden,
             @AuthenticationPrincipal User currentAdmin) {
-        return ResponseEntity.ok(moderationService.setPostHiddenStatus(postId, hide, currentAdmin));
+        boolean shouldHide = (hidden != null) ? hidden : (hide != null ? hide : true);
+        return ResponseEntity.ok(moderationService.setPostHiddenStatus(postId, shouldHide, currentAdmin));
+    }
+
+    @PatchMapping("/posts/{postId}/unhide")
+    public ResponseEntity<PostResponse> unhidePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User currentAdmin) {
+        return ResponseEntity.ok(moderationService.setPostHiddenStatus(postId, false, currentAdmin));
     }
 
     @DeleteMapping("/posts/{postId}")

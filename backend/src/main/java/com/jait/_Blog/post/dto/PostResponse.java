@@ -1,6 +1,7 @@
 package com.jait._Blog.post.dto;
 
 import com.jait._Blog.post.MediaType;
+import com.jait._Blog.user.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class PostResponse {
     private Long authorId;
     private String authorUsername;
     private String authorAvatarUrl;
+    private Role authorRole;
     private String content;
     private String mediaUrl;
     private MediaType mediaType;

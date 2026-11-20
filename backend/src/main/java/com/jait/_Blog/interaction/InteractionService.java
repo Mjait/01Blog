@@ -3,6 +3,8 @@ package com.jait._Blog.interaction;
 import com.jait._Blog.exception.ApiException;
 import com.jait._Blog.interaction.dto.CommentRequest;
 import com.jait._Blog.interaction.dto.CommentResponse;
+import com.jait._Blog.notification.NotificationService;
+import com.jait._Blog.notification.NotificationType;
 import com.jait._Blog.post.Post;
 import com.jait._Blog.post.PostService;
 import com.jait._Blog.post.dto.PostResponse;
@@ -22,6 +24,7 @@ public class InteractionService {
     private final PostLikeRepository postLikeRepository;
     private final CommentRepository commentRepository;
     private final PostService postService;
+    private final NotificationService notificationService;
 
     @Transactional
     public PostResponse likePost(Long postId, User currentUser) {
@@ -40,6 +43,15 @@ public class InteractionService {
                 .build();
 
         postLikeRepository.save(like);
+
+        notificationService.sendNotification(
+                post.getAuthor(),
+                currentUser,
+                post.getId(),
+                "@" + currentUser.getUsername() + " liked your post",
+                NotificationType.LIKE
+        );
+
         return postService.toResponse(post, currentUser);
     }
 
@@ -67,7 +79,21 @@ public class InteractionService {
                 .content(request.getContent().trim())
                 .build();
 
-        return toCommentResponse(commentRepository.save(comment));
+        Comment savedComment = commentRepository.save(comment);
+
+        String preview = savedComment.getContent().length() > 60
+                ? savedComment.getContent().substring(0, 57) + "..."
+                : savedComment.getContent();
+
+        notificationService.sendNotification(
+                post.getAuthor(),
+                currentUser,
+                post.getId(),
+                "@" + currentUser.getUsername() + " commented on your post: \"" + preview + "\"",
+                NotificationType.COMMENT
+        );
+
+        return toCommentResponse(savedComment);
     }
 
     @Transactional(readOnly = true)

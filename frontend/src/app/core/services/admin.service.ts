@@ -55,9 +55,7 @@ export class AdminService {
   }
 
   resolveReport(reportId: number, status: 'RESOLVED' | 'DISMISSED'): Observable<ReportItem> {
-    return this.http.patch<ReportItem>(`${this.baseUrl}/reports/${reportId}?status=${status}`, {}).pipe(
-      catchError(() => this.http.patch<ReportItem>(`${this.baseUrl}/reports/${reportId}/resolve`, {}))
-    );
+    return this.http.patch<ReportItem>(`${this.baseUrl}/reports/${reportId}?status=${status}`, {});
   }
 
   getAllPosts(): Observable<PostItem[]> {

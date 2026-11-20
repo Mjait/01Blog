@@ -39,11 +39,14 @@ export class UserService {
     return this.http.delete<UserProfile>(`${this.baseUrl}/users/${userId}/subscribe`);
   }
 
-  updatePost(postId: number, content: string, file: File | null): Observable<PostItem> {
+  updatePost(postId: number, content: string, file: File | null, removeMedia: boolean = false): Observable<PostItem> {
     const formData = new FormData();
     formData.append('content', content);
     if (file) {
       formData.append('file', file);
+    }
+    if (removeMedia) {
+      formData.append('removeMedia', 'true');
     }
     return this.http.put<PostItem>(`${this.baseUrl}/posts/${postId}`, formData);
   }

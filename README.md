@@ -1,6 +1,39 @@
 # 🧶 Woob (01Blog) — Fullstack Technical Specification & Architecture
 
-A social and editorial blogging platform built with **Spring Boot 3.x** and **Angular 22 (Zoneless & Signal-based)**. Woob implements a masculine, editorial aesthetic (Midnight Slate, Steel Indigo, Bronze/Gold highlights), strict visual feedback standards, mandatory confirmation dialogs for destructive actions, and a scalable administration architecture.
+A social and editorial blogging platform built with **Java Spring Boot 3.x** and **Angular (Zoneless & Signal-based)**. Woob implements a refined editorial aesthetic (Midnight Slate & Clean Linen dual-mode, Steel Indigo, Bronze/Gold highlights), strict visual feedback standards, mandatory confirmation dialogs for destructive actions, real-time updates, Markdown post authoring, and a scalable administration architecture.
+
+---
+
+## 🚀 Quickstart & Setup Instructions
+
+### Prerequisites
+- **Java**: JDK 21+ installed (`java --version`)
+- **Node.js**: Node 20+ or 22+ with `npm` (`node -v`, `npm -v`)
+- **Database**: Docker & Docker Compose installed (or local PostgreSQL 15+)
+
+### 1. Start the PostgreSQL Database
+```bash
+docker compose up -d
+```
+*Creates container `01blog-postgres` running on port `5432` (`db: blog_db`, `user: postgres`, `password: postgres`).*
+
+### 2. Start the Spring Boot Backend
+```bash
+cd backend
+./gradlew bootRun
+```
+*Backend runs on `http://localhost:8080`.*
+- **Seeded Default Admin**:
+  - Username: `admin`
+  - Password: `admin123`
+
+### 3. Start the Angular Frontend
+```bash
+cd frontend
+npm install
+npm start
+```
+*Frontend runs on `http://localhost:4200`.*
 
 ---
 
@@ -8,24 +41,27 @@ A social and editorial blogging platform built with **Spring Boot 3.x** and **An
 
 ```text
 01blog/
-├── BACKEND_REFERENCE.md              # Standalone API Quick Reference
-├── README.md                          # Project Overview & Quickstart
-├── backend/                           # Spring Boot 3.x Backend Service
-│   ├── pom.xml
+├── README.md                          # Project Overview & Quickstart Guide
+├── docker-compose.yml                 # PostgreSQL Database Container
+├── backend/                           # Spring Boot Backend Service (Gradle)
+│   ├── build.gradle
+│   ├── settings.gradle
 │   ├── uploads/                       # Local Multipart File Storage
 │   └── src/main/java/com/jait/_Blog/
-│       ├── config/                    # Security, JWT, CORS, WebMvc Configuration
+│       ├── config/                    # Security, JWT, CORS, WebMvc, DataInitializer
 │       ├── exception/                 # Global API Exception Handling
+│       ├── auth/                      # Registration, Login, JWT Token Service
 │       ├── user/                      # User, Role, Profile & Subscription Domain
-│       ├── post/                      # Posts, Media Attachments, Likes & Comments
-│       ├── notification/              # Notification Event Generation & Query
-│       └── admin/                     # Administrative Governance & Moderation
-└── frontend/                          # Angular 22 Single Page Application
+│       ├── post/                      # Posts, Media Attachments, File Storage
+│       ├── interaction/               # Likes & Comments Domain
+│       ├── notification/              # Notification Event Dispatch & Polling
+│       └── moderation/                # Moderation, Reports & Admin Controls
+└── frontend/                          # Angular Single Page Application
     ├── package.json
     ├── angular.json
     ├── tsconfig.json
     └── src/
-        ├── styles.scss                # Global Editorial CSS Tokens & Theme Variables
+        ├── styles.scss                # Global Editorial CSS Tokens (Dark/Light)
         ├── main.ts                    # Client Entrypoint (Zoneless Bootstrap)
         ├── main.server.ts             # Server Entrypoint
         └── app/
@@ -35,15 +71,16 @@ A social and editorial blogging platform built with **Spring Boot 3.x** and **An
             ├── core/
             │   ├── guards/            # authGuard & adminGuard (SSR-safe)
             │   ├── interceptors/      # jwt.interceptor.ts
-            │   └── services/          # auth, api, post, user, admin, notification
+            │   └── services/          # auth, user, post, admin, notification
             ├── shared/
             │   ├── components/        # navbar, confirm-dialog, report-modal
+            │   ├── pipes/             # markdown.pipe.ts (Formatting)
             │   └── services/          # feedback.service.ts (Snackbar & Dialogs)
             └── features/
                 ├── auth/              # login & register components
-                ├── feed/              # community-feed (Dual-mode, Media Previews)
+                ├── feed/              # community-feed (Dual-mode, Media Previews, Inline Edit)
                 ├── profile/           # user-profile (Public/Personal Block, Inline CRUD)
-                └── admin/             # admin-dashboard (Scalable 3-Tab Moderation)
+                └── admin/             # admin-dashboard (Scalable 3-Tab Moderation & Analytics)
 ```
 
 ---
@@ -382,3 +419,18 @@ curl -i -X PATCH "http://localhost:8080/api/admin/users/3/ban?banned=false" \
 curl -i -X PATCH "http://localhost:8080/api/admin/users/1/ban?banned=true" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
+
+---
+
+## 8. Bonus Features Implemented
+
+1. **Markdown Support for Posts (`MarkdownPipe`)**:
+   - Posts support formatted Markdown: **bold** (`**text**`), *italic* (`*text*`), code blocks (` ```code``` `), inline code (` `code` `), blockquotes (`> text`), `# headers`, bullet lists (`- item`), and links (`[title](url)`).
+2. **Dark Mode & Light Mode Toggle**:
+   - One-click toggle (☀️ / 🌙) in the navigation bar switching between **Midnight Slate** (Dark) and **Clean Linen** (Light) themes, persisted in browser `localStorage`.
+3. **Basic Admin Analytics**:
+   - Top 4 overview metrics including a dedicated **"Most Reported Creators"** live leaderboard card to identify recurring offenders.
+4. **Infinite Scrolling / Feed Pagination**:
+   - Post feeds are loaded in 10-item chunks with a smooth "Load More Posts" trigger preventing DOM overload.
+5. **Real-time Notifications Polling**:
+   - Automatic 25-second background polling keeps the unread notification badge synchronized across open client tabs without requiring manual page reloads.

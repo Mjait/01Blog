@@ -36,6 +36,11 @@ public class Report {
     @Column(nullable = false, length = 500)
     private String reason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ReportStatus status = ReportStatus.PENDING;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

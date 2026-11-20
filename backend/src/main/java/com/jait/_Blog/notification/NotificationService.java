@@ -53,7 +53,8 @@ public class NotificationService {
         }
 
         String targetText = (postId != null) ? "Post #" + postId : "@" + reportedUser.getUsername();
-        String message = "🚩 @" + reporter.getUsername() + " reported " + targetText + ": \"" + reason + "\"";
+        String safeReason = (reason != null && reason.length() > 120) ? reason.substring(0, 117) + "..." : reason;
+        String message = "🚩 @" + reporter.getUsername() + " reported " + targetText + ": \"" + safeReason + "\"";
 
         List<Notification> notifications = admins.stream()
                 .filter(admin -> !admin.getId().equals(reporter.getId()))

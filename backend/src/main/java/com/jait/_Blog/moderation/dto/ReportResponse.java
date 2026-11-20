@@ -1,5 +1,6 @@
 package com.jait._Blog.moderation.dto;
 
+import com.jait._Blog.moderation.ReportStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,5 +18,6 @@ public class ReportResponse {
     private String reportedUsername;
     private Long reportedPostId;
     private String reason;
+    private ReportStatus status;
     private LocalDateTime createdAt;
 }

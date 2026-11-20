@@ -3,6 +3,7 @@ package com.jait._Blog.post;
 import com.jait._Blog.exception.ApiException;
 import com.jait._Blog.interaction.CommentRepository;
 import com.jait._Blog.interaction.PostLikeRepository;
+import com.jait._Blog.moderation.ReportRepository;
 import com.jait._Blog.notification.NotificationRepository;
 import com.jait._Blog.notification.NotificationService;
 import com.jait._Blog.post.dto.PostResponse;
@@ -29,6 +30,7 @@ public class PostService {
     private final NotificationRepository notificationRepository;
     private final PostLikeRepository postLikeRepository;
     private final CommentRepository commentRepository;
+    private final ReportRepository reportRepository;
     private final UserService userService;
 
     @Transactional
@@ -104,6 +106,7 @@ public class PostService {
         postLikeRepository.deleteAllByPost(post);
         commentRepository.deleteAllByPost(post);
         notificationRepository.deleteAllByPostId(postId);
+        reportRepository.deleteAllByReportedPostId(postId);
         postRepository.delete(post);
     }
 
@@ -167,6 +170,7 @@ public class PostService {
                 .authorId(post.getAuthor().getId())
                 .authorUsername(post.getAuthor().getUsername())
                 .authorAvatarUrl(post.getAuthor().getAvatarUrl())
+                .authorRole(post.getAuthor().getRole())
                 .content(post.getContent())
                 .mediaUrl(post.getMediaUrl())
                 .mediaType(post.getMediaType())
