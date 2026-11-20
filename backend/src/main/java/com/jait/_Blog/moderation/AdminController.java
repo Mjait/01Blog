@@ -53,6 +53,14 @@ public class AdminController {
         return ResponseEntity.ok(moderationService.setUserBanStatus(userId, banned, currentAdmin));
     }
 
+    @PatchMapping("/users/{userId}/role")
+    public ResponseEntity<AdminUserResponse> updateUserRole(
+            @PathVariable Long userId,
+            @RequestParam Role role,
+            @AuthenticationPrincipal User currentAdmin) {
+        return ResponseEntity.ok(moderationService.updateUserRole(userId, role, currentAdmin));
+    }
+
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<MessageResponse> deleteUser(
             @PathVariable Long userId,

@@ -468,6 +468,41 @@ class ApplicationTests {
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        @DisplayName("Moderation 4 (Governance): Admin can promote user, but cannot ban another admin or demote root admin")
+        void adminGovernanceAndMultiAdminProtection() throws Exception {
+            String adminToken = loginAsAdmin();
+            Long candidateId = registerAndGetId("candidateAdmin", "candidate@01blog.com");
+
+            // 1. Promote user to ADMIN -> 200 OK
+            mockMvc.perform(patch("/api/admin/users/" + candidateId + "/role?role=ADMIN")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.role").value("ADMIN"));
+
+            // 2. Admin cannot ban another admin -> 400 Bad Request
+            mockMvc.perform(patch("/api/admin/users/" + candidateId + "/ban?banned=true")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isBadRequest());
+
+            // 3. Admin cannot delete another admin -> 400 Bad Request
+            mockMvc.perform(delete("/api/admin/users/" + candidateId)
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isBadRequest());
+
+            // 4. Admin cannot be reported -> 400 Bad Request
+            mockMvc.perform(post("/api/users/" + candidateId + "/report")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"reason\":\"Trying to report a fellow administrator\"}"))
+                    .andExpect(status().isBadRequest());
+
+            // 5. Root admin (id=1) cannot be demoted -> 400 Bad Request
+            mockMvc.perform(patch("/api/admin/users/1/role?role=USER")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     // =========================================================================

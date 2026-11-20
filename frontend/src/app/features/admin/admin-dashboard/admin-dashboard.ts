@@ -5,6 +5,7 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AdminService, AdminUserItem, ReportItem } from '../../../core/services/admin.service';
 import { PostItem } from '../../../core/services/post.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -238,23 +239,41 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
                 </td>
                 <td>{{ u.postsCount }}</td>
                 <td class="actions-cell">
+                  <!-- Promote to Admin / Demote to User -->
+                  <button 
+                    *ngIf="u.role === 'USER' && !u.banned" 
+                    class="btn-gold btn-xs" 
+                    (click)="promoteToAdmin(u)">
+                    👑 Make Admin
+                  </button>
+                  <button 
+                    *ngIf="u.role === 'ADMIN' && u.id !== currentUser?.id && u.username !== 'admin'" 
+                    class="btn-steel btn-xs" 
+                    (click)="demoteToUser(u)">
+                    Demote to User
+                  </button>
+                  <span *ngIf="u.role === 'ADMIN'" class="target-badge" style="background: rgba(200, 169, 81, 0.15); color: var(--accent-gold); font-size: 0.72rem;">
+                    🛡️ Protected Admin
+                  </span>
+
+                  <!-- Ban / Unban User (Only non-admins) -->
                   <button 
                     *ngIf="!u.banned && u.role !== 'ADMIN'" 
                     class="btn-danger btn-xs" 
                     (click)="toggleBanUser(u)">
-                    🚫 Ban User
+                    🚫 Ban
                   </button>
                   <button 
                     *ngIf="u.banned" 
                     class="btn-gold btn-xs" 
                     (click)="toggleBanUser(u)">
-                    ✓ Unban User
+                    ✓ Unban
                   </button>
                   <button 
                     *ngIf="u.role !== 'ADMIN'" 
                     class="btn-danger btn-xs" 
                     (click)="deleteUser(u)">
-                    🗑️ Delete User
+                    🗑️ Delete
                   </button>
                 </td>
               </tr>
@@ -586,11 +605,16 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
   `]
 })
 export class AdminDashboardComponent implements OnInit {
+  authService = inject(AuthService);
   private adminService = inject(AdminService);
   private feedback = inject(FeedbackService);
   private platformId = inject(PLATFORM_ID);
   private route = inject(ActivatedRoute);
   private pendingInspectId: number | null = null;
+
+  get currentUser() {
+    return this.authService.currentUser();
+  }
 
   activeTab = signal<'reports' | 'users' | 'posts'>('reports');
 
@@ -801,6 +825,44 @@ export class AdminDashboardComponent implements OnInit {
       },
       error: () => {
         this.reports.update(list => list.map(r => r.id === report.id ? { ...r, status: 'RESOLVED', resolved: true } : r));
+      }
+    });
+  }
+
+  promoteToAdmin(user: AdminUserItem): void {
+    this.feedback.confirm({
+      title: `Promote @${user.username} to Administrator`,
+      message: `Grant full administrative privileges to @${user.username}? They will be able to moderate content and manage users.`,
+      confirmText: 'Yes, Promote',
+      isDestructive: false
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.adminService.updateUserRole(user.id, 'ADMIN').subscribe({
+          next: (updated) => {
+            this.users.update(list => list.map(u => u.id === user.id ? updated : u));
+            this.feedback.showSuccess(`@${user.username} is now an Administrator!`);
+          },
+          error: (err) => this.feedback.showError(err.error?.message || 'Failed to update user role')
+        });
+      }
+    });
+  }
+
+  demoteToUser(user: AdminUserItem): void {
+    this.feedback.confirm({
+      title: `Demote @${user.username} to Standard User`,
+      message: `Revoke administrative privileges from @${user.username}? They will no longer have access to moderation tools.`,
+      confirmText: 'Yes, Demote',
+      isDestructive: true
+    }).subscribe(confirmed => {
+      if (confirmed) {
+        this.adminService.updateUserRole(user.id, 'USER').subscribe({
+          next: (updated) => {
+            this.users.update(list => list.map(u => u.id === user.id ? updated : u));
+            this.feedback.showSuccess(`@${user.username} has been demoted to User.`);
+          },
+          error: (err) => this.feedback.showError(err.error?.message || 'Failed to demote user')
+        });
       }
     });
   }

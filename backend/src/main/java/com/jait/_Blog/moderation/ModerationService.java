@@ -7,7 +7,8 @@ import com.jait._Blog.moderation.dto.AdminUserResponse;
 import com.jait._Blog.moderation.dto.ReportRequest;
 import com.jait._Blog.moderation.dto.ReportResponse;
 import com.jait._Blog.notification.NotificationRepository;
-import com.jait._Blog.notification.NotificationService; // <-- 1. استيراد NotificationService
+import com.jait._Blog.notification.NotificationService;
+import com.jait._Blog.notification.NotificationType;
 import com.jait._Blog.post.MediaStorageService;
 import com.jait._Blog.post.Post;
 import com.jait._Blog.post.PostRepository;

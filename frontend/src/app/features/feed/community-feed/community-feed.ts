@@ -106,6 +106,9 @@ import { finalize } from 'rxjs';
                   <a [routerLink]="['/profile', post.authorId]" class="author-name">
                     @{{ post.authorUsername }}
                   </a>
+                  <span *ngIf="post.authorRole === 'ADMIN'" class="role-pill" style="font-size: 0.68rem; margin-left: 6px;">
+                    🛡️ Admin
+                  </span>
                   <span class="post-date">{{ post.createdAt | date:'short' }}</span>
                 </div>
               </div>
@@ -118,7 +121,7 @@ import { finalize } from 'rxjs';
                 <button *ngIf="isOwnerOrAdmin(post)" class="action-link delete" (click)="deletePost(post)">
                   🗑️ Delete
                 </button>
-                <button *ngIf="currentUser?.id !== post.authorId" class="action-link report" (click)="reportPost(post)">
+                <button *ngIf="currentUser?.id !== post.authorId && post.authorRole !== 'ADMIN'" class="action-link report" (click)="reportPost(post)">
                   🚩 Report
                 </button>
               </div>

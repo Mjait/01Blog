@@ -197,7 +197,8 @@ npm start
 | Method | Endpoint | Query / Payload | Behavior & Validation |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/admin/users` | None | Lists all users with counts, roles, and `banned` status. |
-| `PATCH` | `/api/admin/users/{id}/ban` | `?banned=true` or `false` | Sets ban flag. Returns `400` if target is current admin. |
+| `PATCH` | `/api/admin/users/{id}/role` | `?role=ADMIN` or `USER` | Promotes/demotes user. Primary admin cannot be demoted. |
+| `PATCH` | `/api/admin/users/{id}/ban` | `?banned=true` or `false` | Sets ban flag. Cannot ban fellow admins or self. |
 | `DELETE` | `/api/admin/users/{id}` | Path: `id` | Cascades user, content, likes, comments, and reports. |
 | `GET` | `/api/admin/reports` | None | Lists reports across all statuses (`PENDING`, `RESOLVED`, `DISMISSED`). |
 | `PATCH` | `/api/admin/reports/{id}` | `?status=RESOLVED` or `DISMISSED` | Resolves or dismisses a moderation report. |

@@ -7,6 +7,7 @@ export interface PostItem {
   authorId: number;
   authorUsername: string;
   authorAvatarUrl: string | null;
+  authorRole?: 'USER' | 'ADMIN';
   content: string;
   mediaUrl: string | null;
   mediaType: 'IMAGE' | 'VIDEO' | null;

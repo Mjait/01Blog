@@ -44,9 +44,12 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
               {{ user.subscribedByCurrentUser ? '✓ Subscribed (Unsubscribe)' : '+ Subscribe' }}
             </button>
 
-            <button class="btn-danger" (click)="openReportUserModal()">
+            <button class="btn-danger" *ngIf="user.role !== 'ADMIN'" (click)="openReportUserModal()">
               🚩 Report User
             </button>
+            <span *ngIf="user.role === 'ADMIN'" class="role-pill" style="font-size: 0.85rem; padding: 6px 12px;">
+              🛡️ Platform Administrator
+            </span>
           </div>
         </div>
       </div>
