@@ -6,17 +6,20 @@ import { interval, Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../services/feedback.service';
 import { NotificationService, NotificationItem } from '../../../core/services/notification.service';
+import { MascotComponent } from '../mascot/mascot.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, MascotComponent],
   template: `
     <header class="navbar-wrapper">
       <div class="nav-container">
         <!-- Logo & Mascot Brand -->
-        <a routerLink="/feed" class="brand-link">
-          <div class="mascot-badge">🧶</div>
+        <a routerLink="/feed" class="brand-link" title="Woob Community">
+          <div class="mascot-badge">
+            <app-mascot [expression]="'happy'" [size]="34" [showAccents]="false" [interactive]="true"></app-mascot>
+          </div>
           <span class="brand-name">Woob</span>
         </a>
 
@@ -62,7 +65,8 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
 
                 <div class="notif-list">
                   <div *ngIf="notifications().length === 0" class="empty-notif">
-                    No notifications yet 🧶
+                    <app-mascot [expression]="'curious'" [size]="52" [showAccents]="false"></app-mascot>
+                    <p style="margin: 8px 0 0;">No notifications yet</p>
                   </div>
 
                   <div 
@@ -114,13 +118,16 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
   `,
   styles: [`
     .navbar-wrapper {
-      background: rgba(30, 27, 36, 0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-subtle);
+      background: var(--navbar-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--navbar-border);
+      box-shadow: var(--navbar-shadow);
       position: sticky;
       top: 0;
       z-index: 1000;
       padding: 10px 20px;
+      transition: background-color 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease;
     }
     .nav-container {
       max-width: 1280px;
@@ -138,14 +145,15 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       color: var(--text-main);
     }
     .mascot-badge {
-      font-size: 1.5rem;
-      background: var(--accent-primary);
       width: 38px;
       height: 38px;
       display: grid;
       place-items: center;
       border-radius: 12px;
-      border: 1px solid rgba(200, 169, 81, 0.3);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      &:hover {
+        transform: scale(1.1) rotate(-4deg);
+      }
     }
     .brand-name {
       font-size: 1.35rem;
@@ -159,22 +167,27 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       position: relative;
       input {
         width: 100%;
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 20px;
         padding: 8px 16px 8px 38px;
         color: var(--text-main);
         font-size: 0.88rem;
         outline: none;
-        transition: border-color 0.2s;
-        &:focus { border-color: var(--accent-gold); }
+        transition: all 0.2s;
+        &:focus {
+          background: var(--bg-input-focus);
+          border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+        }
       }
       .search-icon {
         position: absolute;
         left: 14px;
         top: 50%;
         transform: translateY(-50%);
-        opacity: 0.6;
+        color: var(--text-muted);
+        opacity: 0.8;
         font-size: 0.85rem;
       }
     }
@@ -193,7 +206,7 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       transition: all 0.2s;
       &.active, &:hover {
         color: var(--text-main);
-        background: rgba(74, 67, 99, 0.4);
+        background: var(--bg-hover);
       }
     }
     .admin-badge {
@@ -210,7 +223,8 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       padding: 6px;
       border-radius: 50%;
       color: var(--text-main);
-      &:hover { background: rgba(255, 255, 255, 0.05); }
+      transition: background-color 0.2s ease;
+      &:hover { background: var(--bg-hover); }
       .badge {
         position: absolute;
         top: 0;
@@ -232,6 +246,9 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       overflow-y: auto;
       padding: 14px;
       z-index: 1200;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--card-shadow);
     }
     .notif-header {
       display: flex;
@@ -257,12 +274,12 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       justify-content: space-between;
       padding: 10px;
       border-radius: 10px;
-      background: #121118;
+      background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       transition: 0.2s;
       &.unread {
         border-color: var(--accent-gold);
-        background: rgba(74, 67, 99, 0.25);
+        background: var(--bg-subtle);
       }
     }
     .notif-main {
@@ -303,8 +320,10 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       text-decoration: none;
       padding: 4px 10px 4px 4px;
       border-radius: 20px;
-      background: #121118;
+      background: var(--bg-input);
       border: 1px solid var(--border-subtle);
+      transition: border-color 0.2s;
+      &:hover { border-color: var(--accent-gold); }
       .user-avatar {
         width: 28px;
         height: 28px;
@@ -314,7 +333,7 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
         place-items: center;
         font-weight: bold;
         font-size: 0.85rem;
-        color: var(--accent-gold);
+        color: #FFFFFF;
       }
       .username { color: var(--text-main); font-size: 0.88rem; font-weight: 500; }
     }
@@ -326,6 +345,7 @@ import { NotificationService, NotificationItem } from '../../../core/services/no
       border-radius: 8px;
       font-size: 0.82rem;
       cursor: pointer;
+      transition: all 0.2s;
       &:hover {
         background: var(--danger);
         color: white;

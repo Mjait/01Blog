@@ -8,18 +8,21 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
 import { PostService, PostItem, CommentItem } from '../../../core/services/post.service';
+import { MascotComponent } from '../../../shared/components/mascot/mascot.component';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-community-feed',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe],
+  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe, MascotComponent],
   template: `
     <div class="feed-layout">
       <!-- Left Sidebar: Profile & Navigation -->
       <aside class="sidebar-left woob-card">
         <div class="user-quick-profile">
-          <div class="avatar-large">🧶</div>
+          <div class="avatar-large">
+            <app-mascot [expression]="'happy'" [size]="56" [showAccents]="false"></app-mascot>
+          </div>
           <h3>@{{ currentUser?.username }}</h3>
           <span class="role-pill">{{ currentUser?.role }}</span>
         </div>
@@ -42,8 +45,14 @@ import { finalize } from 'rxjs';
 
         <!-- Post Publisher Card -->
         <div class="create-post-card woob-card">
+          <div class="peeking-mascot-tab">
+            <app-mascot [expression]="'peeking'" [size]="52" [showAccents]="false"></app-mascot>
+          </div>
+
           <div class="create-top">
-            <span class="creator-avatar">🧶</span>
+            <span class="creator-avatar">
+              <app-mascot [expression]="'excited'" [size]="38" [showAccents]="false"></app-mascot>
+            </span>
             <textarea 
               [(ngModel)]="newPostContent" 
               placeholder="Share your latest creation or thought with markdown (**bold**, *italic*, #header)..." 
@@ -80,14 +89,14 @@ import { finalize } from 'rxjs';
         <div class="posts-stream">
           <!-- Loading State -->
           <div *ngIf="loading()" class="empty-state woob-card">
-            <span class="mascot-empty">⏳</span>
-            <p>Loading posts...</p>
+            <app-mascot [expression]="'excited'" [size]="72" [animated]="true"></app-mascot>
+            <p style="margin-top: 12px;">Spinning community threads...</p>
           </div>
 
           <!-- Empty State -->
           <div *ngIf="!loading() && posts().length === 0" class="empty-state woob-card">
-            <span class="mascot-empty">🧵</span>
-            <h3>No posts found</h3>
+            <app-mascot [expression]="feedMode() === 'subscribed' ? 'curious' : 'happy'" [size]="84" [animated]="true"></app-mascot>
+            <h3 style="margin-top: 12px;">No posts found</h3>
             <p *ngIf="feedMode() === 'subscribed'">
               You haven't subscribed to any active creators yet. Switch to "Explore All" or publish a post!
             </p>
@@ -227,19 +236,17 @@ import { finalize } from 'rxjs';
       padding: 20px 14px 16px;
       border-bottom: 1px solid var(--border-subtle);
       .avatar-large {
-        font-size: 2.2rem;
-        background: var(--accent-primary);
         width: 58px;
         height: 58px;
-        line-height: 58px;
         margin: 0 auto 10px;
-        border-radius: 50%;
-        border: 2px solid var(--accent-gold);
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       h3 { margin: 0 0 6px; font-size: 1.05rem; }
       .role-pill {
         font-size: 0.75rem;
-        background: #121118;
+        background: var(--bg-input);
         border: 1px solid var(--border-subtle);
         color: var(--accent-gold);
         padding: 2px 8px;
@@ -261,28 +268,48 @@ import { finalize } from 'rxjs';
         transition: 0.2s;
         &.active, &:hover {
           color: var(--text-main);
-          background: rgba(74, 67, 99, 0.4);
+          background: var(--bg-hover);
         }
       }
       .admin-link { color: var(--accent-gold); }
     }
-    .create-post-card { padding: 18px; margin-bottom: 24px; }
+    .create-post-card { 
+      padding: 18px; 
+      margin-bottom: 24px; 
+      position: relative;
+    }
+    .peeking-mascot-tab {
+      position: absolute;
+      top: -30px;
+      right: 24px;
+      z-index: 2;
+      pointer-events: none;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.06));
+    }
     .create-top {
       display: flex;
       gap: 12px;
       margin-bottom: 12px;
-      .creator-avatar { font-size: 1.8rem; }
+      .creator-avatar { 
+        display: flex;
+        align-items: flex-start;
+      }
       textarea {
         flex: 1;
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 10px;
         color: var(--text-main);
         padding: 12px;
         font-size: 0.95rem;
         outline: none;
         resize: vertical;
-        &:focus { border-color: var(--accent-gold); }
+        transition: all 0.2s;
+        &:focus {
+          background: var(--bg-input-focus);
+          border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+        }
       }
     }
     .media-preview-container {
@@ -361,7 +388,7 @@ import { finalize } from 'rxjs';
     }
     .inline-edit-box {
       margin: 10px 0 16px;
-      background: #121118;
+      background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: 10px;
       padding: 12px;
@@ -408,9 +435,17 @@ import { finalize } from 'rxjs';
         color: var(--text-muted);
         cursor: pointer;
         font-size: 0.9rem;
-        transition: 0.2s;
-        &:hover { color: var(--text-main); }
-        &.liked { color: var(--accent-gold); font-weight: 600; }
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        &:hover {
+          color: var(--text-main);
+          background: var(--bg-hover);
+        }
+        &.liked {
+          color: var(--accent-gold);
+          font-weight: 600;
+        }
       }
     }
     .comments-section {
@@ -420,7 +455,7 @@ import { finalize } from 'rxjs';
       .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
       .comment-item {
         font-size: 0.88rem;
-        background: #121118;
+        background: var(--bg-input);
         padding: 8px 12px;
         border-radius: 8px;
         border: 1px solid var(--border-subtle);
@@ -434,6 +469,9 @@ import { finalize } from 'rxjs';
           color: var(--danger);
           cursor: pointer;
           font-size: 0.75rem;
+          padding: 2px 6px;
+          border-radius: 4px;
+          &:hover { background: var(--danger-subtle); }
         }
       }
       .no-comments { font-size: 0.82rem; color: var(--text-muted); }
@@ -442,14 +480,19 @@ import { finalize } from 'rxjs';
         gap: 8px;
         input {
           flex: 1;
-          background: #121118;
-          border: 1px solid var(--border-subtle);
+          background: var(--bg-input);
+          border: 1px solid var(--border-input);
           border-radius: 8px;
           padding: 8px 12px;
           color: var(--text-main);
           font-size: 0.88rem;
           outline: none;
-          &:focus { border-color: var(--accent-gold); }
+          transition: all 0.2s;
+          &:focus {
+            background: var(--bg-input-focus);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+          }
         }
       }
     }
@@ -466,12 +509,12 @@ import { finalize } from 'rxjs';
       flex-wrap: wrap;
       gap: 8px;
       .tag {
-        background: #121118;
+        background: var(--tag-bg);
         border: 1px solid var(--border-subtle);
         padding: 4px 10px;
         border-radius: 14px;
         font-size: 0.8rem;
-        color: var(--accent-gold);
+        color: var(--tag-text);
       }
     }
     .mobile-feed-tabs {
@@ -488,9 +531,10 @@ import { finalize } from 'rxjs';
         font-size: 0.88rem;
         font-weight: 600;
         cursor: pointer;
+        transition: all 0.2s;
         &.active {
-          background: var(--accent-gold);
-          color: #121118;
+          background: var(--btn-gold-bg);
+          color: var(--btn-gold-text);
           border-color: var(--accent-gold);
         }
       }

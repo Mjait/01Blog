@@ -6,15 +6,16 @@ import { MatDialog } from '@angular/material/dialog';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService, UserProfile } from '../../../core/services/user.service';
-import { PostService, PostItem } from '../../../core/services/post.service';
+import { PostService, PostItem, CommentItem } from '../../../core/services/post.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
 import { ReportModalComponent } from '../../../shared/components/report-modal/report-modal';
 import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
+import { MascotComponent } from '../../../shared/components/mascot/mascot.component';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe],
+  imports: [CommonModule, FormsModule, RouterModule, MarkdownPipe, MascotComponent],
   template: `
     <div class="profile-container" *ngIf="profile() as user">
       <!-- Profile Banner & Header Card -->
@@ -89,17 +90,18 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
       <h3 class="section-heading">🧵 Posts by @{{ user.username }}</h3>
 
       <div *ngIf="posts().length === 0" class="empty-block woob-card">
-        <span>🧶</span>
-        <p>No posts published on this block yet.</p>
+        <app-mascot [expression]="'tired'" [size]="78" [animated]="true"></app-mascot>
+        <p style="margin-top: 14px;">No posts published on this block yet.</p>
       </div>
 
       <div class="posts-list">
         <div *ngFor="let post of posts()" class="post-card woob-card">
           <div class="post-top">
             <span class="timestamp">{{ post.createdAt | date:'medium' }}</span>
-            <div class="crud-controls" *ngIf="isOwnProfile() || authService.isAdmin()">
+            <div class="crud-controls">
               <button *ngIf="isOwnProfile()" class="btn-steel btn-sm" (click)="startEdit(post)">✏️ Edit</button>
-              <button class="btn-danger btn-sm" (click)="deletePost(post)">🗑️ Delete</button>
+              <button *ngIf="isOwnProfile() || authService.isAdmin()" class="btn-danger btn-sm" (click)="deletePost(post)">🗑️ Delete</button>
+              <button *ngIf="!isOwnProfile() && post.authorRole !== 'ADMIN'" class="btn-steel btn-sm report-post-btn" (click)="reportPost(post)">🚩 Report</button>
             </div>
           </div>
 
@@ -110,9 +112,42 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
             <video *ngIf="post.mediaType === 'VIDEO'" [src]="'http://localhost:8080' + post.mediaUrl" controls></video>
           </div>
 
-          <div class="post-stats">
-            <span>❤️ {{ post.likesCount }} Likes</span>
-            <span>💬 {{ post.commentsCount }} Comments</span>
+          <!-- Interactive Action Bar: Like & Comment -->
+          <div class="post-interactions">
+            <button class="interact-btn" [class.liked]="post.likedByCurrentUser" (click)="toggleLike(post)" [title]="post.likedByCurrentUser ? 'Unlike' : 'Like'">
+              <span class="heart-icon">{{ post.likedByCurrentUser ? '❤️' : '🤍' }}</span>
+              <span>{{ post.likesCount }}</span>
+            </button>
+
+            <button class="interact-btn" (click)="toggleComments(post)" title="Comments">
+              <span>💬</span>
+              <span>{{ post.commentsCount }}</span>
+            </button>
+          </div>
+
+          <!-- Inline Comments Section -->
+          <div class="comments-section" *ngIf="openCommentsPostId() === post.id">
+            <div class="comments-list">
+              <div *ngFor="let c of activeComments()" class="comment-item">
+                <div class="comment-content">
+                  <a [routerLink]="['/profile', c.authorId]" class="comment-author">@{{ c.authorUsername }}:</a>
+                  <span class="comment-text">{{ c.content }}</span>
+                </div>
+                <button *ngIf="currentUser?.id === c.authorId || currentUser?.id === post.authorId || authService.isAdmin()" 
+                        class="del-comment-btn" 
+                        (click)="deleteComment(c.id, post)"
+                        title="Delete comment">✕</button>
+              </div>
+              <div *ngIf="activeComments().length === 0" class="no-comments">No comments yet. Be the first to comment!</div>
+            </div>
+
+            <div class="comment-input-row" *ngIf="authService.isAuthenticated()">
+              <input type="text" [(ngModel)]="newCommentText" placeholder="Write a comment..." (keyup.enter)="submitComment(post)" />
+              <button class="btn-gold btn-sm" (click)="submitComment(post)" [disabled]="!newCommentText.trim()">Send</button>
+            </div>
+            <div class="login-prompt" *ngIf="!authService.isAuthenticated()">
+              <a routerLink="/login">Sign in</a> to leave a comment.
+            </div>
           </div>
         </div>
       </div>
@@ -133,10 +168,10 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
       height: 130px;
       background: repeating-linear-gradient(
         45deg,
-        #2E2A37,
-        #2E2A37 14px,
-        #4A4363 14px,
-        #4A4363 28px
+        var(--banner-grad-1),
+        var(--banner-grad-1) 14px,
+        var(--banner-grad-2),
+        var(--banner-grad-2) 28px
       );
       border-bottom: 2px solid var(--accent-gold);
     }
@@ -154,8 +189,8 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
         place-items: center;
         font-size: 2.2rem;
         font-weight: 700;
-        color: var(--accent-gold);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        color: #FFFFFF;
+        box-shadow: var(--avatar-shadow);
       }
       h2 { margin: 0 0 6px; font-size: 1.6rem; }
       .stats-line { color: var(--text-muted); font-size: 0.92rem; margin: 0 0 10px; }
@@ -172,15 +207,20 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
       h3 { margin: 0 0 12px; font-size: 1.1rem; color: var(--accent-gold); }
       textarea {
         width: 100%;
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 10px;
         color: var(--text-main);
         padding: 12px;
         font-size: 0.95rem;
         margin-bottom: 12px;
         outline: none;
-        &:focus { border-color: var(--accent-gold); }
+        transition: all 0.2s;
+        &:focus {
+          background: var(--bg-input-focus);
+          border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+        }
       }
     }
     .media-preview-box {
@@ -220,18 +260,116 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
       .crud-controls { display: flex; gap: 8px; }
     }
     .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .report-post-btn {
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      &:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-subtle); }
+    }
     .post-body { font-size: 0.98rem; line-height: 1.5; margin: 0 0 14px; white-space: pre-wrap; }
     .post-media {
       margin-bottom: 12px;
       img, video { width: 100%; max-height: 440px; object-fit: cover; border-radius: 10px; }
     }
-    .post-stats {
+    .post-interactions {
       display: flex;
       gap: 16px;
-      font-size: 0.85rem;
-      color: var(--text-muted);
       border-top: 1px solid var(--border-subtle);
-      padding-top: 10px;
+      padding-top: 12px;
+      .interact-btn {
+        background: none;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        &:hover {
+          color: var(--text-main);
+          background: var(--bg-hover);
+        }
+        &.liked {
+          color: var(--accent-gold);
+          font-weight: 600;
+        }
+      }
+    }
+    .comments-section {
+      margin-top: 14px;
+      border-top: 1px dashed var(--border-subtle);
+      padding-top: 12px;
+      .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+      .comment-item {
+        font-size: 0.88rem;
+        background: var(--bg-input);
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-subtle);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        .comment-content {
+          flex: 1;
+          word-break: break-word;
+          .comment-author {
+            color: var(--accent-gold);
+            font-weight: 600;
+            text-decoration: none;
+            margin-right: 6px;
+            &:hover { text-decoration: underline; }
+          }
+          .comment-text {
+            color: var(--text-main);
+          }
+        }
+        .del-comment-btn {
+          background: none;
+          border: none;
+          color: var(--danger);
+          cursor: pointer;
+          font-size: 0.78rem;
+          padding: 2px 6px;
+          border-radius: 4px;
+          &:hover { background: var(--danger-subtle); }
+        }
+      }
+      .no-comments { font-size: 0.82rem; color: var(--text-muted); padding: 4px 0; }
+      .comment-input-row {
+        display: flex;
+        gap: 8px;
+        input {
+          flex: 1;
+          background: var(--bg-input);
+          border: 1px solid var(--border-input);
+          border-radius: 8px;
+          padding: 8px 12px;
+          color: var(--text-main);
+          font-size: 0.88rem;
+          outline: none;
+          transition: all 0.2s;
+          &:focus {
+            background: var(--bg-input-focus);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+          }
+        }
+      }
+      .login-prompt {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        padding: 6px 0;
+        a {
+          color: var(--accent-gold);
+          font-weight: 600;
+          text-decoration: none;
+          &:hover { text-decoration: underline; }
+        }
+      }
     }
     .empty-block { text-align: center; padding: 36px; color: var(--text-muted); }
   `]
@@ -256,6 +394,15 @@ export class UserProfileComponent implements OnInit {
   removeMedia = false;
   mediaPreviewUrl = signal<string | null>(null);
   mediaPreviewType = signal<'IMAGE' | 'VIDEO' | null>(null);
+
+  // Comments & Likes Signals for Profile Posts
+  openCommentsPostId = signal<number | null>(null);
+  activeComments = signal<CommentItem[]>([]);
+  newCommentText = '';
+
+  get currentUser() {
+    return this.authService.currentUser();
+  }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -386,6 +533,96 @@ export class UserProfileComponent implements OnInit {
             this.feedback.showSuccess('Post deleted!');
           },
           error: (err) => this.feedback.showError(err.error?.message || 'Could not delete post')
+        });
+      }
+    });
+  }
+
+  toggleLike(post: PostItem): void {
+    if (!this.authService.isAuthenticated()) {
+      this.feedback.showError('Please sign in to like posts');
+      return;
+    }
+
+    const action$ = post.likedByCurrentUser
+      ? this.postService.unlikePost(post.id)
+      : this.postService.likePost(post.id);
+
+    action$.subscribe({
+      next: (updated) => {
+        this.posts.update(list => list.map(p => p.id === post.id ? updated : p));
+        this.feedback.showSuccess(updated.likedByCurrentUser ? 'Post liked!' : 'Post unliked');
+      },
+      error: (err) => this.feedback.showError(err.error?.message || 'Action failed')
+    });
+  }
+
+  toggleComments(post: PostItem): void {
+    if (this.openCommentsPostId() === post.id) {
+      this.openCommentsPostId.set(null);
+      this.activeComments.set([]);
+    } else {
+      this.openCommentsPostId.set(post.id);
+      this.postService.getComments(post.id).subscribe({
+        next: (comments) => this.activeComments.set(comments),
+        error: () => this.feedback.showError('Could not load comments')
+      });
+    }
+  }
+
+  submitComment(post: PostItem): void {
+    if (!this.authService.isAuthenticated()) {
+      this.feedback.showError('Please sign in to comment');
+      return;
+    }
+    if (!this.newCommentText.trim()) return;
+
+    this.postService.addComment(post.id, this.newCommentText).subscribe({
+      next: (comment) => {
+        this.activeComments.update(list => [...list, comment]);
+        this.posts.update(list => list.map(p => p.id === post.id ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+        this.newCommentText = '';
+        this.feedback.showSuccess('Comment added!');
+      },
+      error: (err) => this.feedback.showError(err.error?.message || 'Failed to add comment')
+    });
+  }
+
+  deleteComment(commentId: number, post: PostItem): void {
+    this.feedback.confirm({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment?',
+      confirmText: 'Delete',
+      isDestructive: true
+    }).subscribe((confirmed) => {
+      if (confirmed) {
+        this.postService.deleteComment(commentId).subscribe({
+          next: () => {
+            this.activeComments.update(list => list.filter(c => c.id !== commentId));
+            this.posts.update(list => list.map(p => p.id === post.id ? { ...p, commentsCount: p.commentsCount - 1 } : p));
+            this.feedback.showSuccess('Comment deleted');
+          },
+          error: (err) => this.feedback.showError(err.error?.message || 'Delete failed')
+        });
+      }
+    });
+  }
+
+  reportPost(post: PostItem): void {
+    const prof = this.profile();
+    const dialogRef = this.dialog.open(ReportModalComponent, {
+      data: {
+        targetUsername: post.authorUsername || prof?.username || 'user',
+        targetUserId: post.authorId || prof!.id,
+        postId: post.id
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((reason: string | null) => {
+      if (reason) {
+        this.postService.reportUser(post.authorId || prof!.id, reason, post.id).subscribe({
+          next: () => this.feedback.showSuccess('Report submitted to administrators for review'),
+          error: (err) => this.feedback.showError(err.error?.message || 'Report submission failed')
         });
       }
     });

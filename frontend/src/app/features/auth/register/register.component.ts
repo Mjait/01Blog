@@ -4,16 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
+import { MascotComponent } from '../../../shared/components/mascot/mascot.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MascotComponent],
   template: `
     <div class="auth-page">
       <div class="woob-card auth-card">
         <div class="mascot-header">
-          <div class="mascot-sphere">🧶</div>
+          <div class="mascot-sphere">
+            <app-mascot [expression]="'happy'" [size]="78" [animated]="true" [interactive]="true"></app-mascot>
+          </div>
           <h2>Join Woob</h2>
           <p class="subtitle">Connect and share your creations with the community</p>
         </div>
@@ -95,14 +98,12 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
     .mascot-header {
       margin-bottom: 20px;
       .mascot-sphere {
-        font-size: 2.8rem;
-        background: var(--accent-primary);
-        width: 68px;
-        height: 68px;
-        line-height: 68px;
+        width: 82px;
+        height: 82px;
         margin: 0 auto 10px;
-        border-radius: 50%;
-        border: 2px solid var(--accent-gold);
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       h2 {
         margin: 0 0 6px;
@@ -130,16 +131,19 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
         font-weight: 500;
       }
       input, textarea {
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 10px;
         padding: 10px 14px;
         color: var(--text-main);
         font-size: 0.92rem;
         outline: none;
         resize: vertical;
+        transition: all 0.2s;
         &:focus {
+          background: var(--bg-input-focus);
           border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
         }
       }
     }

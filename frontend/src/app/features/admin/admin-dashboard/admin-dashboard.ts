@@ -364,7 +364,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .admin-banner {
       text-align: center;
       padding: 24px;
-      background: linear-gradient(135deg, #1E1B24 0%, #302840 100%);
+      background: var(--admin-banner-bg);
       border: 1px solid var(--accent-gold);
       .banner-title {
         display: flex;
@@ -388,8 +388,8 @@ import { AuthService } from '../../../core/services/auth.service';
     }
     .leader-pill {
       font-size: 0.8rem;
-      background: rgba(158, 59, 59, 0.2);
-      color: #ff8585;
+      background: var(--danger-subtle);
+      color: var(--danger-text);
       padding: 2px 6px;
       border-radius: 6px;
       font-weight: 600;
@@ -407,7 +407,7 @@ import { AuthService } from '../../../core/services/auth.service';
       }
       .stat-label { font-size: 0.85rem; color: var(--text-muted); }
       .stat-value { font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
-      .highlight-danger { color: #ff6b6b; }
+      .highlight-danger { color: var(--danger-text); }
       .highlight-gold { color: var(--accent-gold); }
       .stat-trend { font-size: 0.8rem; color: var(--text-muted); }
     }
@@ -428,8 +428,8 @@ import { AuthService } from '../../../core/services/auth.service';
         cursor: pointer;
         transition: all 0.2s;
         &.active, &:hover {
-          color: #121118;
-          background: var(--accent-gold);
+          color: var(--btn-gold-text);
+          background: var(--btn-gold-bg);
           border-color: var(--accent-gold);
         }
       }
@@ -454,37 +454,43 @@ import { AuthService } from '../../../core/services/auth.service';
       flex-wrap: wrap;
     }
     .admin-search-input {
-      background: #121118;
-      border: 1px solid var(--border-subtle);
+      background: var(--bg-input);
+      border: 1px solid var(--border-input);
       color: var(--text-main);
       padding: 8px 14px;
       border-radius: 10px;
       min-width: 260px;
       font-size: 0.88rem;
       outline: none;
-      &:focus { border-color: var(--accent-gold); }
+      transition: all 0.2s;
+      &:focus {
+        background: var(--bg-input-focus);
+        border-color: var(--accent-gold);
+        box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+      }
     }
     .filter-pills {
       display: flex;
       gap: 6px;
       button {
-        background: #121118;
+        background: var(--bg-input);
         color: var(--text-muted);
         border: 1px solid var(--border-subtle);
         padding: 6px 12px;
         border-radius: 8px;
         font-size: 0.8rem;
         cursor: pointer;
+        transition: all 0.2s;
         &.active {
           background: var(--accent-primary);
-          color: var(--accent-gold);
-          border-color: var(--accent-gold);
+          color: #FFFFFF;
+          border-color: var(--accent-primary);
           font-weight: 600;
         }
       }
     }
     .inspected-post-box {
-      background: #121118;
+      background: var(--bg-input);
       border: 1px solid var(--accent-gold);
       border-radius: 12px;
       padding: 16px;
@@ -533,7 +539,7 @@ import { AuthService } from '../../../core/services/auth.service';
       th {
         color: var(--text-muted);
         font-weight: 600;
-        background: rgba(18, 17, 24, 0.5);
+        background: var(--bg-input);
       }
     }
     .target-badge {
@@ -548,8 +554,8 @@ import { AuthService } from '../../../core/services/auth.service';
         border: 1px solid rgba(200, 169, 81, 0.35);
       }
       &.user-target {
-        background: rgba(74, 67, 99, 0.35);
-        color: #d0c8e8;
+        background: var(--bg-hover);
+        color: var(--text-main);
         border: 1px solid var(--border-subtle);
       }
     }
@@ -558,9 +564,9 @@ import { AuthService } from '../../../core/services/auth.service';
       border-radius: 10px;
       font-size: 0.75rem;
       font-weight: 600;
-      &.pending, &.banned { background: rgba(158, 59, 59, 0.25); color: #ff8080; }
-      &.resolved, &.active { background: rgba(62, 123, 84, 0.25); color: #75e09a; }
-      &.dismissed { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+      &.pending, &.banned { background: var(--danger-subtle); color: var(--danger-text); }
+      &.resolved, &.active { background: var(--success-subtle); color: var(--success-text); }
+      &.dismissed { background: var(--bg-hover); color: var(--text-muted); }
     }
     .role-tag {
       font-size: 0.75rem;

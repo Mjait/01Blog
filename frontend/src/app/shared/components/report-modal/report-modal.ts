@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { FeedbackService } from '../../services/feedback.service';
+import { MascotComponent } from '../mascot/mascot.component';
 
 export interface ReportModalData {
   targetUsername: string;
@@ -13,11 +14,13 @@ export interface ReportModalData {
 @Component({
   selector: 'app-report-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MascotComponent],
   template: `
     <div class="report-modal-card">
       <div class="modal-header">
-        <span class="mascot-icon">🧶</span>
+        <div class="mascot-modal-badge">
+          <app-mascot [expression]="'sad'" [size]="58" [showAccents]="false"></app-mascot>
+        </div>
         <h3>Report @{{ data.targetUsername }}</h3>
         <p class="subtitle" *ngIf="data.postId">Reporting Post #{{ data.postId }}</p>
         <p class="subtitle" *ngIf="!data.postId">Reporting User Profile</p>
@@ -53,10 +56,10 @@ export interface ReportModalData {
     .modal-header {
       text-align: center;
       margin-bottom: 18px;
-      .mascot-icon {
-        font-size: 2.2rem;
-        display: inline-block;
-        margin-bottom: 6px;
+      .mascot-modal-badge {
+        margin: 0 auto 8px;
+        display: flex;
+        justify-content: center;
       }
       h3 { margin: 0; font-size: 1.25rem; }
       .subtitle { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0; }
@@ -71,18 +74,23 @@ export interface ReportModalData {
         color: var(--text-muted);
       }
       textarea {
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 10px;
         color: var(--text-main);
         padding: 12px;
         font-size: 0.92rem;
         outline: none;
         resize: vertical;
-        &:focus { border-color: var(--accent-gold); }
+        transition: all 0.2s;
+        &:focus {
+          background: var(--bg-input-focus);
+          border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
+        }
       }
       .error-msg {
-        color: #ff6b6b;
+        color: var(--danger-text);
         font-size: 0.8rem;
       }
     }

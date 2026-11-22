@@ -1,7 +1,5 @@
 package com.jait._Blog.notification;
-
 import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +42,6 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    // إشعار جميع المشرفين عند إرسال تبليغ جديد
 @Transactional
     public void notifyAdminsAboutReport(User reporter, User reportedUser, Long postId, String reason) {
         List<User> admins = userRepository.findAllByRole(Role.ADMIN);

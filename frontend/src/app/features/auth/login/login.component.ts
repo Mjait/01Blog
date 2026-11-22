@@ -4,17 +4,20 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FeedbackService } from '../../../shared/services/feedback.service';
+import { MascotComponent } from '../../../shared/components/mascot/mascot.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MascotComponent],
   template: `
     <div class="auth-page">
       <div class="woob-card auth-card">
         <!-- Woob Mascot Badge -->
         <div class="mascot-header">
-          <div class="mascot-sphere">🧶</div>
+          <div class="mascot-sphere">
+            <app-mascot [expression]="'excited'" [size]="78" [animated]="true" [interactive]="true"></app-mascot>
+          </div>
           <h2>Welcome back!</h2>
           <p class="subtitle">Enter your credentials to enter Woob</p>
         </div>
@@ -76,15 +79,12 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
     .mascot-header {
       margin-bottom: 24px;
       .mascot-sphere {
-        font-size: 3rem;
-        background: var(--accent-primary);
-        width: 72px;
-        height: 72px;
-        line-height: 72px;
+        width: 82px;
+        height: 82px;
         margin: 0 auto 12px;
-        border-radius: 50%;
-        border: 2px solid var(--accent-gold);
-        box-shadow: 0 4px 16px rgba(200, 169, 81, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       h2 {
         margin: 0 0 6px;
@@ -112,15 +112,18 @@ import { FeedbackService } from '../../../shared/services/feedback.service';
         font-weight: 500;
       }
       input {
-        background: #121118;
-        border: 1px solid var(--border-subtle);
+        background: var(--bg-input);
+        border: 1px solid var(--border-input);
         border-radius: 10px;
         padding: 12px 14px;
         color: var(--text-main);
         font-size: 0.95rem;
         outline: none;
+        transition: all 0.2s;
         &:focus {
+          background: var(--bg-input-focus);
           border-color: var(--accent-gold);
+          box-shadow: 0 0 0 3px rgba(172, 126, 27, 0.15);
         }
       }
     }
